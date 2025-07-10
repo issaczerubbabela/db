@@ -193,7 +193,8 @@ export default function AutomationDatabase() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <div className="flex-1 flex flex-col">
+      {/* Main Content Area */}
+      <div className={`flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-2/3' : 'w-full'}`}>
         {/* Header */}
         <div className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-6 py-4">
@@ -253,7 +254,7 @@ export default function AutomationDatabase() {
                   {filteredAutomations.map((automation) => (
                     <tr 
                       key={automation.air_id}
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      className={`hover:bg-gray-50 cursor-pointer transition-colors ${selectedAutomation?.air_id === automation.air_id ? 'bg-blue-50 border-l-4 border-blue-500' : ''}`}
                       onClick={() => handleRowClick(automation)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
@@ -304,11 +305,13 @@ export default function AutomationDatabase() {
       </div>
 
       {/* Sidebar */}
-      <AutomationDetailsSidebar
-        isOpen={isSidebarOpen}
-        onClose={closeSidebar}
-        automation={selectedAutomation}
-      />
+      <div className={`transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-1/3' : 'w-0'} overflow-hidden`}>
+        <AutomationDetailsSidebar
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+          automation={selectedAutomation}
+        />
+      </div>
     </div>
   );
 }
