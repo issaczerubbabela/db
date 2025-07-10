@@ -1,36 +1,152 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Automation Database System
 
-## Getting Started
+A comprehensive database system for managing automation records and workflows. Built with Next.js frontend, NestJS backend, and PostgreSQL database.
 
-First, run the development server:
+## 🏗️ Architecture
 
+### Frontend (Next.js)
+- **Framework**: Next.js 15 with React 19
+- **Styling**: Tailwind CSS 4
+- **UI Components**: Headless UI, Heroicons
+- **Features**: 
+  - Clean table view with essential columns (AIR ID, Name, Type, Complexity, Description)
+  - Detailed sidebar with grouped information
+  - Search functionality
+  - Responsive design
+
+### Backend (NestJS)
+- **Framework**: NestJS with TypeScript
+- **Database**: PostgreSQL with TypeORM
+- **Features**:
+  - RESTful API endpoints
+  - Swagger documentation
+  - Data validation with class-validator
+  - Fuzzy search with pg_trgm
+  - Normalized database structure
+
+### Database Schema
+The database is normalized into several tables:
+- `automations` - Main automation records
+- `tools` - Automation tools (UiPath, Power Automate, etc.)
+- `people` - Personnel involved in automations
+- `automation_people_roles` - Many-to-many relationship for people and their roles
+- `environments` - Dev/QA/Prod environment configurations
+- `metrics` - Performance metrics and success rates
+- `artifacts` - Links to documentation and artifacts
+- `test_data` - Test data information
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 18+ 
+- PostgreSQL 12+
+- Git
+
+### 1. Database Setup
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Create database
+createdb automation_db
+
+# Run the schema script
+psql -d automation_db -f database/schema.sql
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Backend Setup
+```bash
+cd backend
+npm install
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+# Copy environment file
+cp .env.example .env
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Update database credentials in .env
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_USERNAME=postgres
+# DB_PASSWORD=your_password
+# DB_NAME=automation_db
 
-## Learn More
+# Start the backend server
+npm run start:dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Frontend Setup
+```bash
+cd ../  # Go back to root
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Start the development server
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Access the Application
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:3001
+- **API Documentation**: http://localhost:3001/api
 
-## Deploy on Vercel
+## 📊 Features
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Main Table View
+- Essential columns: AIR ID, Name, Type, Complexity, Description
+- Color-coded complexity indicators
+- Search functionality
+- Responsive design
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Detailed Sidebar
+Information is logically grouped into sections:
+- **Basic Information**: Type, COE/FED, Complexity, Description
+- **Tool Information**: Tool, Version, Process Details
+- **People & Roles**: Project Manager, Developer, Tester, Business SPOC
+- **Environment Details**: Dev, QA, Prod configurations
+- **Infrastructure**: Queue, Shared Folders, Mailboxes
+- **Timeline**: Deployment dates, Warranty information
+- **Performance Metrics**: Success rates, Case counts
+- **Quality Assurance**: QA handshake, Test data SPOC
+- **Artifacts & Links**: Documentation, Code review status
+- **Comments & Documentation**: Additional notes
+
+## 🔧 API Endpoints
+
+### Automations
+- `GET /automations` - Get all automations
+- `GET /automations/:air_id` - Get specific automation
+- `GET /automations/search?q=term` - Search automations
+- `POST /automations` - Create new automation
+- `PATCH /automations/:air_id` - Update automation
+- `DELETE /automations/:air_id` - Delete automation
+
+## 🛠️ Development Commands
+
+### Frontend
+```bash
+# Development
+npm run dev
+
+# Build
+npm run build
+
+# Start production
+npm run start
+
+# Lint
+npm run lint
+```
+
+### Backend
+```bash
+# Development
+npm run start:dev
+
+# Build
+npm run build
+
+# Production
+npm run start:prod
+
+# Testing
+npm run test
+```
+
+---
+
+**Built with ❤️ for efficient automation management**
