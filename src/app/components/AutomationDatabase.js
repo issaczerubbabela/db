@@ -66,39 +66,89 @@ export default function AutomationDatabase() {
     const lines = csvText.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    // Parse CSV with proper handling of quoted fields containing commas
+    const parseCSVLine = (line) => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseCSVLine(lines[0]);
+    console.log('CSV Headers:', headers);
     const automations = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      const values = parseCSVLine(lines[i]);
+      console.log(`Line ${i} values count: ${values.length}, headers count: ${headers.length}`);
+      
       if (values.length === headers.length) {
         const automation = {};
         headers.forEach((header, index) => {
-          // Map CSV headers to database fields
-          const fieldMap = {
-            'air_id': 'air_id',
-            'AIR ID': 'air_id',
-            'name': 'name',
-            'Name': 'name',
-            'Automation Name': 'name',
-            'type': 'type',
-            'Type': 'type',
-            'brief_description': 'brief_description',
-            'Brief Description': 'brief_description',
-            'Description': 'brief_description',
-            'complexity': 'complexity',
-            'Complexity': 'complexity',
-            'tool': 'tool',
-            'Tool': 'tool'
-          };
-          const mappedField = fieldMap[header] || header.toLowerCase().replace(/\s+/g, '_');
-          automation[mappedField] = values[index] || '';
+          // Direct field mapping - headers should match database fields exactly
+          automation[header] = values[index] || '';
         });
         
-        // Ensure required fields exist
-        if (automation.air_id && automation.name) {
-          automations.push(automation);
+        // Validate and clean the automation data
+        const cleanedAutomation = {
+          air_id: automation.air_id?.trim() || '',
+          name: automation.name?.trim() || '',
+          type: automation.type?.trim() || '',
+          brief_description: automation.brief_description?.trim() || null,
+          coe_fed: automation.coe_fed?.trim() || null,
+          complexity: automation.complexity?.trim() || null,
+          // Combine tool and tool_version into tool_version field since DB doesn't have separate tool field
+          tool_version: automation.tool_version?.trim() || automation.tool?.trim() || null,
+          process_details: automation.process_details?.trim() || null,
+          object_details: automation.object_details?.trim() || null,
+          queue: automation.queue?.trim() || null,
+          shared_folders: automation.shared_folders?.trim() || null,
+          shared_mailboxes: automation.shared_mailboxes?.trim() || null,
+          qa_handshake: automation.qa_handshake?.trim() || null,
+          preprod_deploy_date: automation.preprod_deploy_date?.trim() || null,
+          prod_deploy_date: automation.prod_deploy_date?.trim() || null,
+          warranty_end_date: automation.warranty_end_date?.trim() || null,
+          comments: automation.comments?.trim() || null,
+          documentation: automation.documentation?.trim() || null,
+          modified: automation.modified?.trim() || null,
+          // Skip modified_by since DB expects modified_by_id (foreign key)
+          path: automation.path?.trim() || null,
+          // Initialize empty arrays/objects for related data
+          people: [],
+          environments: [],
+          test_data: {},
+          metrics: {},
+          artifacts: {}
+        };
+        
+        console.log('Cleaned automation:', cleanedAutomation);
+        
+        // Ensure required fields exist and are not empty
+        if (cleanedAutomation.air_id && cleanedAutomation.name && cleanedAutomation.type) {
+          automations.push(cleanedAutomation);
+        } else {
+          console.warn(`Skipping automation on line ${i}: missing required fields`, {
+            air_id: cleanedAutomation.air_id,
+            name: cleanedAutomation.name,
+            type: cleanedAutomation.type
+          });
         }
+      } else {
+        console.warn(`Line ${i} has ${values.length} values but expected ${headers.length}`);
       }
     }
     return automations;
@@ -116,17 +166,26 @@ export default function AutomationDatabase() {
     setIsImporting(true);
     try {
       const text = await file.text();
+      console.log('CSV text length:', text.length);
+      console.log('First 200 characters:', text.substring(0, 200));
+      
       const csvAutomations = parseCsvData(text);
+      console.log('Parsed automations:', csvAutomations.length);
+      console.log('First automation:', csvAutomations[0]);
       
       if (csvAutomations.length === 0) {
-        alert('No valid automation data found in CSV');
+        alert('No valid automation data found in CSV. Please check that the CSV has the correct headers and data format.');
         return;
       }
 
       // Import automations one by one
       let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+      
       for (const automation of csvAutomations) {
         try {
+          console.log('Importing automation:', automation.air_id);
           const response = await fetch('/api/automations', {
             method: 'POST',
             headers: {
@@ -137,15 +196,31 @@ export default function AutomationDatabase() {
 
           if (response.ok) {
             successCount++;
+            console.log('Successfully imported:', automation.air_id);
+          } else {
+            errorCount++;
+            const errorText = await response.text();
+            console.error('Failed to import:', automation.air_id, 'Error:', errorText);
+            errors.push(`${automation.air_id}: ${errorText}`);
           }
         } catch (error) {
+          errorCount++;
           console.error('Error importing automation:', automation.air_id, error);
+          errors.push(`${automation.air_id}: ${error.message}`);
         }
       }
 
       // Refresh the automations list
       await fetchAutomations();
-      alert(`Successfully imported ${successCount} out of ${csvAutomations.length} automations`);
+      
+      let message = `Successfully imported ${successCount} out of ${csvAutomations.length} automations`;
+      if (errorCount > 0) {
+        message += `\n\nErrors encountered:\n${errors.slice(0, 3).join('\n')}`;
+        if (errors.length > 3) {
+          message += `\n... and ${errors.length - 3} more errors`;
+        }
+      }
+      alert(message);
       
     } catch (error) {
       console.error('Error reading CSV file:', error);
