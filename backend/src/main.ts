@@ -8,7 +8,7 @@ async function bootstrap() {
   
   // Enable CORS for frontend
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
   });
@@ -35,9 +35,9 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  await app.listen(3001);
-  console.log('🚀 Automation Database API is running on http://localhost:3001');
-  console.log('📚 API Documentation available at http://localhost:3001/api');
+  await app.listen(5000);
+  console.log('🚀 Automation Database API is running on http://localhost:5000');
+  console.log('📚 API Documentation available at http://localhost:5000/api');
 }
 
 bootstrap();

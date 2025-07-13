@@ -66,7 +66,7 @@ export class Automation {
   @Column({ type: 'text', nullable: true })
   documentation: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'datetime', nullable: true })
   modified: Date;
 
   @Column({ nullable: true })

@@ -1,0 +1,7 @@
+{
+  "automation_id": "AIR-001",
+  "artifacts_link": "https://example.com/artifacts",
+  "code_review": "Completed",
+  "demo": "Recorded",
+  "rampup_issue_list": "Issue 1, Issue 2"
+}

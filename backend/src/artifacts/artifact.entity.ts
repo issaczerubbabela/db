@@ -29,6 +29,6 @@ export class Artifact {
 
   // Relations
   @ManyToOne(() => Automation, automation => automation.artifacts)
-  @JoinColumn({ name: 'automation_id' })
+  @JoinColumn({ name: 'automation_id', referencedColumnName: 'air_id' })
   automation: Automation;
 }
