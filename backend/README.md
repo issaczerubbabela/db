@@ -43,6 +43,268 @@ A NestJS-based REST API for managing automation records and related data includi
 | `npm run lint` | Run ESLint |
 | `npm run format` | Format code with Prettier |
 
+## 🔄 Database Migration Guide
+
+The backend is currently configured to use SQLite with better-sqlite3. Below are instructions for migrating to other database systems.
+
+### 🐘 PostgreSQL Migration
+
+1. **Install PostgreSQL driver:**
+   ```bash
+   npm install pg @types/pg
+   npm uninstall better-sqlite3
+   ```
+
+2. **Update `app.module.ts`:**
+   ```typescript
+   TypeOrmModule.forRoot({
+     type: 'postgres',
+     host: process.env.DB_HOST || 'localhost',
+     port: parseInt(process.env.DB_PORT, 10) || 5432,
+     username: process.env.DB_USERNAME || 'postgres',
+     password: process.env.DB_PASSWORD || 'password',
+     database: process.env.DB_NAME || 'automation_db',
+     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+     synchronize: process.env.NODE_ENV !== 'production',
+     logging: process.env.NODE_ENV === 'development',
+   }),
+   ```
+
+3. **Create `.env` file:**
+   ```env
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USERNAME=postgres
+   DB_PASSWORD=your_password
+   DB_NAME=automation_db
+   ```
+
+4. **Update entity constraints for PostgreSQL:**
+   - Ensure all entity decorators are PostgreSQL compatible
+   - Update any SQLite-specific data types
+
+### 🏢 Microsoft SQL Server Migration
+
+1. **Install SQL Server driver:**
+   ```bash
+   npm install mssql @types/mssql
+   npm uninstall better-sqlite3
+   ```
+
+2. **Update `app.module.ts`:**
+   ```typescript
+   TypeOrmModule.forRoot({
+     type: 'mssql',
+     host: process.env.DB_HOST || 'localhost',
+     port: parseInt(process.env.DB_PORT, 10) || 1433,
+     username: process.env.DB_USERNAME || 'sa',
+     password: process.env.DB_PASSWORD || 'password',
+     database: process.env.DB_NAME || 'automation_db',
+     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+     synchronize: process.env.NODE_ENV !== 'production',
+     logging: process.env.NODE_ENV === 'development',
+     options: {
+       encrypt: false, // Set to true for Azure
+       trustServerCertificate: true,
+     },
+   }),
+   ```
+
+3. **Create `.env` file:**
+   ```env
+   DB_HOST=localhost
+   DB_PORT=1433
+   DB_USERNAME=sa
+   DB_PASSWORD=your_password
+   DB_NAME=automation_db
+   ```
+
+### 🔮 Oracle Database Migration
+
+1. **Install Oracle driver:**
+   ```bash
+   npm install oracledb @types/oracledb
+   npm uninstall better-sqlite3
+   ```
+
+2. **Update `app.module.ts`:**
+   ```typescript
+   TypeOrmModule.forRoot({
+     type: 'oracle',
+     host: process.env.DB_HOST || 'localhost',
+     port: parseInt(process.env.DB_PORT, 10) || 1521,
+     username: process.env.DB_USERNAME || 'system',
+     password: process.env.DB_PASSWORD || 'password',
+     database: process.env.DB_NAME || 'XE',
+     serviceName: process.env.DB_SERVICE || 'XE',
+     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+     synchronize: process.env.NODE_ENV !== 'production',
+     logging: process.env.NODE_ENV === 'development',
+   }),
+   ```
+
+3. **Create `.env` file:**
+   ```env
+   DB_HOST=localhost
+   DB_PORT=1521
+   DB_USERNAME=system
+   DB_PASSWORD=your_password
+   DB_NAME=XE
+   DB_SERVICE=XE
+   ```
+
+### 🍃 MongoDB Migration
+
+⚠️ **Note:** MongoDB requires significant changes since it's a NoSQL database and TypeORM has limited MongoDB support. Consider using Mongoose instead.
+
+#### Option 1: TypeORM with MongoDB
+
+1. **Install MongoDB driver:**
+   ```bash
+   npm install mongodb @types/mongodb
+   npm uninstall better-sqlite3
+   ```
+
+2. **Update `app.module.ts`:**
+   ```typescript
+   TypeOrmModule.forRoot({
+     type: 'mongodb',
+     host: process.env.DB_HOST || 'localhost',
+     port: parseInt(process.env.DB_PORT, 10) || 27017,
+     database: process.env.DB_NAME || 'automation_db',
+     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+     synchronize: process.env.NODE_ENV !== 'production',
+     logging: process.env.NODE_ENV === 'development',
+     useUnifiedTopology: true,
+   }),
+   ```
+
+3. **Update entities for MongoDB:**
+   ```typescript
+   import { Entity, ObjectIdColumn, ObjectId, Column } from 'typeorm';
+   
+   @Entity('automations')
+   export class Automation {
+     @ObjectIdColumn()
+     id: ObjectId;
+     
+     @Column()
+     air_id: string;
+     
+     // ... other columns
+   }
+   ```
+
+#### Option 2: Mongoose (Recommended for MongoDB)
+
+1. **Install Mongoose:**
+   ```bash
+   npm install @nestjs/mongoose mongoose
+   npm uninstall @nestjs/typeorm typeorm better-sqlite3
+   ```
+
+2. **Update `app.module.ts`:**
+   ```typescript
+   import { MongooseModule } from '@nestjs/mongoose';
+   
+   @Module({
+     imports: [
+       MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost/automation_db'),
+       // ... other modules
+     ],
+   })
+   ```
+
+3. **Convert entities to Mongoose schemas:**
+   ```typescript
+   import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+   import { Document } from 'mongoose';
+   
+   @Schema()
+   export class Automation extends Document {
+     @Prop({ required: true })
+     air_id: string;
+     
+     @Prop({ required: true })
+     name: string;
+     
+     // ... other properties
+   }
+   
+   export const AutomationSchema = SchemaFactory.createForClass(Automation);
+   ```
+
+### 🔧 General Migration Steps
+
+1. **Backup your current data:**
+   ```bash
+   # For SQLite
+   cp ../automation_database.db ../automation_database_backup.db
+   ```
+
+2. **Export existing data:**
+   ```bash
+   # Create data export script or use database tools
+   ```
+
+3. **Test the migration:**
+   - Set up the new database in a test environment
+   - Run migrations
+   - Verify data integrity
+   - Test all API endpoints
+
+4. **Update environment variables:**
+   - Create appropriate `.env` files for each environment
+   - Update deployment configurations
+
+5. **Update CI/CD pipelines:**
+   - Update database setup in testing environments
+   - Modify deployment scripts
+
+### 📊 Database Comparison
+
+| Database | Best For | Pros | Cons |
+|----------|----------|------|------|
+| **SQLite** | Small apps, development | Simple setup, no server needed | Limited concurrency |
+| **PostgreSQL** | Most applications | Feature-rich, reliable, open source | Requires server setup |
+| **SQL Server** | Enterprise, Windows | Excellent tooling, integration | Microsoft ecosystem, licensing |
+| **Oracle** | Enterprise, complex apps | Powerful features, enterprise support | Expensive, complex |
+| **MongoDB** | Document-based data | Flexible schema, horizontal scaling | NoSQL learning curve |
+
+### ⚠️ Migration Considerations
+
+- **Data Types:** Different databases support different data types
+- **Constraints:** Foreign key constraints may behave differently
+- **Indexing:** Index strategies vary between databases
+- **Transactions:** Transaction handling may need updates
+- **Connection Pooling:** Configure appropriate connection pools
+- **Performance:** Query optimization strategies differ
+- **Backup/Recovery:** Each database has different backup strategies
+
+### 🧪 Testing After Migration
+
+1. **Run all tests:**
+   ```bash
+   npm run test
+   npm run test:e2e
+   ```
+
+2. **Test API endpoints:**
+   ```bash
+   # Test all CRUD operations
+   curl http://localhost:5000/automations
+   curl http://localhost:5000/artifacts
+   ```
+
+3. **Load testing:**
+   - Test with realistic data volumes
+   - Verify performance characteristics
+   - Check memory usage
+
+4. **Backup/Restore testing:**
+   - Test backup procedures
+   - Verify restore functionality
+
 ## 🗄️ Database
 
 The API uses SQLite database with TypeORM as the ORM and better-sqlite3 driver. The database file is located at the root of the project (`automation_database.db`).
@@ -274,17 +536,73 @@ Example error response:
 ### Environment Variables (Optional)
 Create a `.env` file in the backend directory for custom configuration:
 
+**For SQLite (current setup):**
 ```env
-# Database
+# Server
+PORT=5000
+NODE_ENV=development
+
+# Database (SQLite)
+DB_PATH=../automation_database.db
+```
+
+**For PostgreSQL:**
+```env
+# Server
+PORT=5000
+NODE_ENV=development
+
+# Database (PostgreSQL)
+DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=password
 DB_NAME=automation_db
+```
 
+**For SQL Server:**
+```env
 # Server
 PORT=5000
 NODE_ENV=development
+
+# Database (SQL Server)
+DB_TYPE=mssql
+DB_HOST=localhost
+DB_PORT=1433
+DB_USERNAME=sa
+DB_PASSWORD=password
+DB_NAME=automation_db
+DB_ENCRYPT=false
+DB_TRUST_SERVER_CERTIFICATE=true
+```
+
+**For Oracle:**
+```env
+# Server
+PORT=5000
+NODE_ENV=development
+
+# Database (Oracle)
+DB_TYPE=oracle
+DB_HOST=localhost
+DB_PORT=1521
+DB_USERNAME=system
+DB_PASSWORD=password
+DB_DATABASE=XE
+DB_SERVICE_NAME=XE
+```
+
+**For MongoDB:**
+```env
+# Server
+PORT=5000
+NODE_ENV=development
+
+# Database (MongoDB)
+DB_TYPE=mongodb
+MONGODB_URI=mongodb://localhost:27017/automation_db
 ```
 
 ### CORS Configuration
@@ -361,6 +679,65 @@ backend/
 - Use the Swagger documentation at http://localhost:5000/api
 - Ensure all required fields are provided in API requests
 - Validate JSON syntax before sending requests
+
+## 📚 Database Quick Reference
+
+### SQLite Commands
+```bash
+# View database schema
+sqlite3 ../automation_database.db ".schema"
+
+# Export data
+sqlite3 ../automation_database.db ".dump" > backup.sql
+
+# Import data
+sqlite3 ../automation_database.db < backup.sql
+
+# Check database size
+ls -lh ../automation_database.db
+```
+
+### PostgreSQL Commands
+```bash
+# Connect to database
+psql -h localhost -U postgres -d automation_db
+
+# Create backup
+pg_dump -h localhost -U postgres automation_db > backup.sql
+
+# Restore backup
+psql -h localhost -U postgres -d automation_db < backup.sql
+
+# Check database size
+psql -h localhost -U postgres -c "SELECT pg_size_pretty(pg_database_size('automation_db'));"
+```
+
+### SQL Server Commands
+```bash
+# Connect using sqlcmd
+sqlcmd -S localhost -U sa -P password -d automation_db
+
+# Create backup (T-SQL)
+BACKUP DATABASE automation_db TO DISK = 'C:\backup\automation_db.bak'
+
+# Restore backup (T-SQL)
+RESTORE DATABASE automation_db FROM DISK = 'C:\backup\automation_db.bak'
+```
+
+### MongoDB Commands
+```bash
+# Connect to MongoDB
+mongo mongodb://localhost:27017/automation_db
+
+# Create backup
+mongodump --db automation_db --out ./backup
+
+# Restore backup
+mongorestore --db automation_db ./backup/automation_db
+
+# Check database size
+mongo automation_db --eval "db.stats()"
+```
 
 ## 📝 Development Notes
 
