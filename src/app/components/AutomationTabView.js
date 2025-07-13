@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MagnifyingGlassIcon, ViewColumnsIcon, RectangleStackIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ViewColumnsIcon, RectangleStackIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { 
   UserIcon, 
   ComputerDesktopIcon, 
@@ -12,7 +12,7 @@ import {
   CogIcon
 } from '@heroicons/react/24/outline';
 
-export default function AutomationTabView({ automations, loading, onViewTypeChange, onAddAutomation }) {
+export default function AutomationTabView({ automations, loading, onViewTypeChange, onAddAutomation, onDeleteAutomation }) {
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const [sidebarSearchTerm, setSidebarSearchTerm] = useState('');
   const [selectedAutomation, setSelectedAutomation] = useState(null);
@@ -487,9 +487,18 @@ export default function AutomationTabView({ automations, loading, onViewTypeChan
               <h2 className="text-lg font-semibold text-gray-900 truncate">
                 {selectedAutomation.name}
               </h2>
-              <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                {selectedAutomation.air_id}
-              </span>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                  {selectedAutomation.air_id}
+                </span>
+                <button
+                  onClick={() => onDeleteAutomation(selectedAutomation.air_id)}
+                  className="text-red-400 hover:text-red-600 transition-colors p-1 rounded hover:bg-red-50"
+                  title="Delete automation"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <nav className="flex space-x-8 px-4" aria-label="Tabs">
               {tabs.map((tab) => {

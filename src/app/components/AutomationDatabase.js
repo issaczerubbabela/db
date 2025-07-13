@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlassIcon, PlusIcon, ViewColumnsIcon, RectangleStackIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, ViewColumnsIcon, RectangleStackIcon, DocumentArrowUpIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import AutomationDetailsSidebar from './AutomationDetailsSidebar';
 import AutomationForm from './AutomationForm';
@@ -59,6 +59,38 @@ export default function AutomationDatabase() {
       }
     } catch (error) {
       console.error('Error creating automation:', error);
+    }
+  };
+
+  const handleDeleteAutomation = async (airId) => {
+    if (!confirm(`Are you sure you want to delete automation ${airId}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/automations/${airId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setAutomations(prev => prev.filter(automation => automation.air_id !== airId));
+        
+        // Close sidebar if the deleted automation was selected
+        if (selectedAutomation?.air_id === airId) {
+          setIsSidebarOpen(false);
+          setSelectedAutomation(null);
+        }
+        
+        console.log(`Automation ${airId} deleted successfully`);
+      } else {
+        const error = await response.text();
+        console.error('Failed to delete automation:', error);
+        alert(`Failed to delete automation: ${error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting automation:', error);
+      alert('Error deleting automation');
     }
   };
 
@@ -274,6 +306,7 @@ export default function AutomationDatabase() {
             loading={loading} 
             onViewTypeChange={setViewType}
             onAddAutomation={() => setIsFormOpen(true)}
+            onDeleteAutomation={handleDeleteAutomation}
           />
         </div>
       ) : (
@@ -410,7 +443,19 @@ export default function AutomationDatabase() {
                               {automation.brief_description}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteAutomation(automation.air_id);
+                                  }}
+                                  className="text-red-400 hover:text-red-600 transition-colors p-1"
+                                  title="Delete automation"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                                <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -472,6 +517,7 @@ export default function AutomationDatabase() {
               isOpen={isSidebarOpen}
               onClose={closeSidebar}
               automation={selectedAutomation}
+              onDeleteAutomation={handleDeleteAutomation}
             />
           </div>
         </>

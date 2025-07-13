@@ -1,6 +1,6 @@
 'use client';
 
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { 
   UserIcon, 
   ComputerDesktopIcon, 
@@ -13,7 +13,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
-export default function AutomationDetailsSidebar({ isOpen, onClose, automation }) {
+export default function AutomationDetailsSidebar({ isOpen, onClose, automation, onDeleteAutomation }) {
   if (!automation) return null;
 
   const getStatusColor = (status) => {
@@ -60,7 +60,16 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
                 </p>
               </div>
             </div>
-            <div className="ml-3 flex h-7 items-center">
+            <div className="ml-3 flex h-7 items-center space-x-2">
+              <button
+                type="button"
+                className="rounded-md bg-red-600 text-red-200 hover:text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-white p-1"
+                onClick={() => onDeleteAutomation(automation.air_id)}
+                title="Delete automation"
+              >
+                <span className="sr-only">Delete automation</span>
+                <TrashIcon className="h-5 w-5" />
+              </button>
               <button
                 type="button"
                 className="rounded-md bg-blue-600 text-blue-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-white"
