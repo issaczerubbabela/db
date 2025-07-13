@@ -45,10 +45,10 @@ A NestJS-based REST API for managing automation records and related data includi
 
 ## 🗄️ Database
 
-The API uses SQLite database with TypeORM as the ORM. The database file is located at the root of the project (`automation_database.db`).
+The API uses SQLite database with TypeORM as the ORM and better-sqlite3 driver. The database file is located at the root of the project (`automation_database.db`).
 
 ### Database Configuration
-- **Type:** SQLite
+- **Type:** SQLite (better-sqlite3)
 - **File:** `../automation_database.db`
 - **Auto-sync:** Enabled in development
 - **Logging:** Enabled in development
@@ -342,6 +342,7 @@ backend/
 2. **Database connection issues:**
    - Ensure SQLite database file exists in the root directory
    - Check file permissions
+   - The project uses better-sqlite3 for better compatibility and performance
 
 3. **Module not found errors:**
    ```bash

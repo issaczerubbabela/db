@@ -42,3 +42,14 @@ next-env.d.ts
 
 /backend/node_modules
 /backend/dist
+
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+automation_database.db*
+
+# Backend logs
+/backend/logs
+/backend/*.log
