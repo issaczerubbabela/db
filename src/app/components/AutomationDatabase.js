@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { MagnifyingGlassIcon, PlusIcon, ViewColumnsIcon, RectangleStackIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useRef } from 'react';
+import { MagnifyingGlassIcon, PlusIcon, ViewColumnsIcon, RectangleStackIcon, DocumentArrowUpIcon } from '@heroicons/react/24/outline';
 import { ChevronRightIcon } from '@heroicons/react/20/solid';
 import AutomationDetailsSidebar from './AutomationDetailsSidebar';
 import AutomationForm from './AutomationForm';
@@ -15,6 +15,8 @@ export default function AutomationDatabase() {
   const [automations, setAutomations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewType, setViewType] = useState('slide'); // 'slide' or 'tab'
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Fetch automations from API
   useEffect(() => {
@@ -57,6 +59,103 @@ export default function AutomationDatabase() {
       }
     } catch (error) {
       console.error('Error creating automation:', error);
+    }
+  };
+
+  const parseCsvData = (csvText) => {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const automations = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+      if (values.length === headers.length) {
+        const automation = {};
+        headers.forEach((header, index) => {
+          // Map CSV headers to database fields
+          const fieldMap = {
+            'air_id': 'air_id',
+            'AIR ID': 'air_id',
+            'name': 'name',
+            'Name': 'name',
+            'Automation Name': 'name',
+            'type': 'type',
+            'Type': 'type',
+            'brief_description': 'brief_description',
+            'Brief Description': 'brief_description',
+            'Description': 'brief_description',
+            'complexity': 'complexity',
+            'Complexity': 'complexity',
+            'tool': 'tool',
+            'Tool': 'tool'
+          };
+          const mappedField = fieldMap[header] || header.toLowerCase().replace(/\s+/g, '_');
+          automation[mappedField] = values[index] || '';
+        });
+        
+        // Ensure required fields exist
+        if (automation.air_id && automation.name) {
+          automations.push(automation);
+        }
+      }
+    }
+    return automations;
+  };
+
+  const handleCsvImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      alert('Please select a CSV file');
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const csvAutomations = parseCsvData(text);
+      
+      if (csvAutomations.length === 0) {
+        alert('No valid automation data found in CSV');
+        return;
+      }
+
+      // Import automations one by one
+      let successCount = 0;
+      for (const automation of csvAutomations) {
+        try {
+          const response = await fetch('/api/automations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(automation),
+          });
+
+          if (response.ok) {
+            successCount++;
+          }
+        } catch (error) {
+          console.error('Error importing automation:', automation.air_id, error);
+        }
+      }
+
+      // Refresh the automations list
+      await fetchAutomations();
+      alert(`Successfully imported ${successCount} out of ${csvAutomations.length} automations`);
+      
+    } catch (error) {
+      console.error('Error reading CSV file:', error);
+      alert('Error reading CSV file');
+    } finally {
+      setIsImporting(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -261,9 +360,30 @@ export default function AutomationDatabase() {
             {/* Footer */}
             <div className="bg-white border-t border-gray-200 px-6 py-3">
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-500">
-                  Showing {filteredAutomations.length} of {automations.length} automations
-                </p>
+                <div className="flex items-center space-x-4">
+                  <p className="text-sm text-gray-500">
+                    Showing {filteredAutomations.length} of {automations.length} automations
+                  </p>
+                  {/* Small CSV Import Button */}
+                  <div className="relative">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv"
+                      onChange={handleCsvImport}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isImporting}
+                      className="flex items-center px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                      title="Import CSV (for testing)"
+                    >
+                      <DocumentArrowUpIcon className="h-3 w-3 mr-1" />
+                      {isImporting ? 'Importing...' : 'CSV'}
+                    </button>
+                  </div>
+                </div>
                 <div className="text-sm text-gray-500">
                   Last updated: {new Date().toLocaleDateString()}
                 </div>

@@ -1,0 +1,6 @@
+air_id,name,type,brief_description,complexity,tool
+AIR-001,"Email Processing Automation","RPA","Automated email processing and response system",medium,UiPath
+AIR-002,"Invoice Data Extraction","Data Processing","Extracts invoice data from PDF documents",high,Python
+AIR-003,"Customer Onboarding","Workflow","Automates customer onboarding process",low,Power Automate
+AIR-004,"Report Generation","Data Processing","Generates monthly financial reports",medium,Excel
+AIR-005,"Inventory Management","RPA","Automated inventory tracking and reordering",high,Blue Prism

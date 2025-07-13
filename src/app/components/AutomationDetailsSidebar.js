@@ -35,6 +35,9 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
   };
 
   const formatPercentage = (value) => {
+    if (value === undefined || value === null || value === '') {
+      return '0%';
+    }
     return `${value}%`;
   };
 
@@ -83,19 +86,19 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
                 <div className="grid grid-cols-1 gap-3">
                   <div>
                     <label className="text-sm font-medium text-gray-500">Type</label>
-                    <p className="text-sm text-gray-900">{automation.type}</p>
+                    <p className="text-sm text-gray-900">{automation.type || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">COE/FED</label>
-                    <p className="text-sm text-gray-900">{automation.coe_fed}</p>
+                    <p className="text-sm text-gray-900">{automation.coe_fed || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Complexity</label>
-                    <p className="text-sm text-gray-900">{automation.complexity}</p>
+                    <p className="text-sm text-gray-900">{automation.complexity || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Description</label>
-                    <p className="text-sm text-gray-900">{automation.brief_description}</p>
+                    <p className="text-sm text-gray-900">{automation.brief_description || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -111,20 +114,20 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-sm font-medium text-gray-500">Tool</label>
-                    <p className="text-sm text-gray-900">{automation.tool}</p>
+                    <p className="text-sm text-gray-900">{automation.tool || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Version</label>
-                    <p className="text-sm text-gray-900">{automation.tool_version}</p>
+                    <p className="text-sm text-gray-900">{automation.tool_version || 'N/A'}</p>
                   </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Process Details</label>
-                  <p className="text-sm text-gray-900">{automation.process_details}</p>
+                  <p className="text-sm text-gray-900">{automation.process_details || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Object Details</label>
-                  <p className="text-sm text-gray-900">{automation.object_details}</p>
+                  <p className="text-sm text-gray-900">{automation.object_details || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -137,12 +140,16 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
               </h3>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="space-y-2">
-                  {automation.people.map((person, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                      <span className="text-sm text-gray-900">{person.name}</span>
-                      <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded text-xs">{person.role}</span>
-                    </div>
-                  ))}
+                  {automation.people && automation.people.length > 0 ? (
+                    automation.people.map((person, index) => (
+                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                        <span className="text-sm text-gray-900">{person.name || 'N/A'}</span>
+                        <span className="text-sm text-gray-500 bg-white px-2 py-1 rounded text-xs">{person.role || 'N/A'}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">No team members assigned</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -154,21 +161,25 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
                 Environment Details
               </h3>
               <div className="space-y-3">
-                {automation.environments.map((env, index) => (
-                  <div key={index} className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-2">{env.type} Environment</h4>
-                    <div className="grid grid-cols-1 gap-2">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">VDI</label>
-                        <p className="text-sm text-gray-900">{env.vdi}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Service Account</label>
-                        <p className="text-sm text-gray-900">{env.service_account}</p>
+                {automation.environments && automation.environments.length > 0 ? (
+                  automation.environments.map((env, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-2">{env.type || 'Unknown'} Environment</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">VDI</label>
+                          <p className="text-sm text-gray-900">{env.vdi || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Service Account</label>
+                          <p className="text-sm text-gray-900">{env.service_account || 'N/A'}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-4">No environments configured</p>
+                )}
               </div>
             </div>
 
@@ -181,19 +192,19 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Queue</label>
-                  <p className="text-sm text-gray-900">{automation.queue}</p>
+                  <p className="text-sm text-gray-900">{automation.queue || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Shared Folders</label>
-                  <p className="text-sm text-gray-900">{automation.shared_folders}</p>
+                  <p className="text-sm text-gray-900">{automation.shared_folders || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Shared Mailboxes</label>
-                  <p className="text-sm text-gray-900">{automation.shared_mailboxes}</p>
+                  <p className="text-sm text-gray-900">{automation.shared_mailboxes || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Path</label>
-                  <p className="text-sm text-gray-900 break-all">{automation.path}</p>
+                  <p className="text-sm text-gray-900 break-all">{automation.path || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -220,7 +231,7 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Last Modified</label>
-                    <p className="text-sm text-gray-900">{formatDate(automation.modified)} by {automation.modified_by}</p>
+                    <p className="text-sm text-gray-900">{formatDate(automation.modified)} by {automation.modified_by || 'Unknown'}</p>
                   </div>
                 </div>
               </div>
@@ -236,20 +247,20 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
                 <div className="grid grid-cols-1 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {formatPercentage(automation.metrics.post_prod_success_rate)}
+                      {formatPercentage(automation.metrics?.post_prod_success_rate || 0)}
                     </div>
                     <div className="text-sm text-gray-500">Success Rate</div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
                       <div className="text-xl font-semibold text-blue-600">
-                        {automation.metrics.post_prod_total_cases.toLocaleString()}
+                        {automation.metrics?.post_prod_total_cases?.toLocaleString() || '0'}
                       </div>
                       <div className="text-sm text-gray-500">Total Cases</div>
                     </div>
                     <div className="text-center">
                       <div className="text-xl font-semibold text-red-600">
-                        {automation.metrics.post_prod_sys_ex_count}
+                        {automation.metrics?.post_prod_sys_ex_count || '0'}
                       </div>
                       <div className="text-sm text-gray-500">System Exceptions</div>
                     </div>
@@ -273,7 +284,7 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Test Data SPOC</label>
-                  <p className="text-sm text-gray-900">{automation.test_data.spoc}</p>
+                  <p className="text-sm text-gray-900">{automation.test_data?.spoc || 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -287,26 +298,30 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Artifacts Link</label>
-                  <a href={automation.artifacts.artifacts_link} className="text-sm text-blue-600 hover:text-blue-800 underline block">
-                    {automation.artifacts.artifacts_link}
-                  </a>
+                  {automation.artifacts?.artifacts_link ? (
+                    <a href={automation.artifacts.artifacts_link} className="text-sm text-blue-600 hover:text-blue-800 underline block">
+                      {automation.artifacts.artifacts_link}
+                    </a>
+                  ) : (
+                    <p className="text-sm text-gray-900">N/A</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   <div>
                     <label className="text-sm font-medium text-gray-500">Code Review</label>
-                    <p className={`text-sm px-2 py-1 rounded text-xs inline-block ${getStatusColor(automation.artifacts.code_review)}`}>
-                      {automation.artifacts.code_review}
+                    <p className={`text-sm px-2 py-1 rounded text-xs inline-block ${getStatusColor(automation.artifacts?.code_review)}`}>
+                      {automation.artifacts?.code_review || 'N/A'}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Demo</label>
-                    <p className={`text-sm px-2 py-1 rounded text-xs inline-block ${getStatusColor(automation.artifacts.demo)}`}>
-                      {automation.artifacts.demo}
+                    <p className={`text-sm px-2 py-1 rounded text-xs inline-block ${getStatusColor(automation.artifacts?.demo)}`}>
+                      {automation.artifacts?.demo || 'N/A'}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-500">Rampup Issues</label>
-                    <p className="text-sm text-gray-900">{automation.artifacts.rampup_issue_list}</p>
+                    <p className="text-sm text-gray-900">{automation.artifacts?.rampup_issue_list || 'N/A'}</p>
                   </div>
                 </div>
               </div>
@@ -321,11 +336,11 @@ export default function AutomationDetailsSidebar({ isOpen, onClose, automation }
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div>
                   <label className="text-sm font-medium text-gray-500">Comments</label>
-                  <p className="text-sm text-gray-900">{automation.comments}</p>
+                  <p className="text-sm text-gray-900">{automation.comments || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Documentation</label>
-                  <p className="text-sm text-gray-900">{automation.documentation}</p>
+                  <p className="text-sm text-gray-900">{automation.documentation || 'N/A'}</p>
                 </div>
               </div>
             </div>
