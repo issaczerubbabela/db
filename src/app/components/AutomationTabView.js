@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MagnifyingGlassIcon, ViewColumnsIcon, RectangleStackIcon, PlusIcon, TrashIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ViewColumnsIcon, RectangleStackIcon, PlusIcon, TrashIcon, FunnelIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { 
   UserIcon, 
   ComputerDesktopIcon, 
@@ -28,7 +28,13 @@ export default function AutomationTabView({
   hasActiveFilters,
   onClearFilters,
   getUniqueValues,
-  allAutomations
+  allAutomations,
+  selectedItems,
+  onSelectItem,
+  onSelectAll,
+  onExport,
+  showExportDropdown,
+  onToggleExportDropdown
 }) {
   const [sidebarSearchTerm, setSidebarSearchTerm] = useState('');
   const [selectedAutomation, setSelectedAutomation] = useState(null);
@@ -558,13 +564,66 @@ export default function AutomationTabView({
               </div>
             </div>
             
-            <button
-              onClick={onAddAutomation}
-              className="ml-4 flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              Add Automation
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={onAddAutomation}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Add Automation
+              </button>
+
+              {/* Export Button */}
+              <div className="relative">
+                <button
+                  onClick={() => onToggleExportDropdown(!showExportDropdown)}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                >
+                  <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+                  Export
+                  <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Export Dropdown - Simplified for tab view */}
+                {showExportDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-20">
+                    <div className="p-3">
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => onExport('csv', 'filtered')}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
+                        >
+                          Export as CSV
+                        </button>
+                        <button
+                          onClick={() => onExport('json', 'filtered')}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
+                        >
+                          Export as JSON
+                        </button>
+                        <button
+                          onClick={() => onExport('excel', 'filtered')}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
+                        >
+                          Export as Excel
+                        </button>
+                        {selectedItems && selectedItems.size > 0 && (
+                          <>
+                            <hr className="my-2" />
+                            <button
+                              onClick={() => onExport('csv', 'selected')}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 rounded text-blue-700"
+                            >
+                              Export Selected ({selectedItems.size}) as CSV
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

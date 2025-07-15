@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MagnifyingGlassIcon, PlusIcon, ViewColumnsIcon, RectangleStackIcon, DocumentArrowUpIcon, TrashIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, ViewColumnsIcon, RectangleStackIcon, DocumentArrowUpIcon, TrashIcon, FunnelIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/20/solid';
 import AutomationDetailsSidebar from './AutomationDetailsSidebar';
 import AutomationForm from './AutomationForm';
@@ -17,6 +17,8 @@ export default function AutomationDatabase() {
   const [viewType, setViewType] = useState('slide'); // 'slide' or 'tab'
   const [isImporting, setIsImporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [selectedItems, setSelectedItems] = useState(new Set());
   const [filters, setFilters] = useState({
     type: '',
     complexity: '',
@@ -26,12 +28,16 @@ export default function AutomationDatabase() {
   });
   const fileInputRef = useRef(null);
   const filterDropdownRef = useRef(null);
+  const exportDropdownRef = useRef(null);
 
   // Close filter dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
         setShowFilters(false);
+      }
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
+        setShowExportDropdown(false);
       }
     };
 
@@ -40,6 +46,16 @@ export default function AutomationDatabase() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Clear selections when filters change
+  useEffect(() => {
+    setSelectedItems(new Set());
+  }, [searchTerm, filters]);
+
+  // Clear selections when view changes
+  useEffect(() => {
+    setSelectedItems(new Set());
+  }, [viewType]);
 
   // Fetch automations from API
   useEffect(() => {
@@ -310,6 +326,167 @@ export default function AutomationDatabase() {
 
   const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
 
+  // Export functionality
+  const formatDataForExport = (data) => {
+    return data.map(automation => ({
+      'AIR ID': automation.air_id || '',
+      'Name': automation.name || '',
+      'Type': automation.type || '',
+      'Complexity': automation.complexity || '',
+      'Brief Description': automation.brief_description || '',
+      'COE/FED': automation.coe_fed || '',
+      'Tool Version': automation.tool_version || '',
+      'Process Details': automation.process_details || '',
+      'Object Details': automation.object_details || '',
+      'Queue': automation.queue || '',
+      'Shared Folders': automation.shared_folders || '',
+      'Shared Mailboxes': automation.shared_mailboxes || '',
+      'QA Handshake': automation.qa_handshake || '',
+      'PreProd Deploy Date': automation.preprod_deploy_date || '',
+      'Prod Deploy Date': automation.prod_deploy_date || '',
+      'Warranty End Date': automation.warranty_end_date || '',
+      'Comments': automation.comments || '',
+      'Documentation': automation.documentation || '',
+      'Modified': automation.modified || '',
+      'Path': automation.path || '',
+      'Created At': automation.created_at || '',
+      'Updated At': automation.updated_at || ''
+    }));
+  };
+
+  const downloadFile = (content, filename, contentType) => {
+    const blob = new Blob([content], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToCSV = (data, filename) => {
+    const formattedData = formatDataForExport(data);
+    if (formattedData.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    const headers = Object.keys(formattedData[0]);
+    const csvContent = [
+      headers.join(','),
+      ...formattedData.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          // Escape quotes and wrap in quotes if contains comma, quote, or newline
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(',')
+      )
+    ].join('\n');
+
+    downloadFile(csvContent, filename, 'text/csv;charset=utf-8;');
+  };
+
+  const exportToJSON = (data, filename) => {
+    const formattedData = formatDataForExport(data);
+    if (formattedData.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    const jsonContent = JSON.stringify(formattedData, null, 2);
+    downloadFile(jsonContent, filename, 'application/json;charset=utf-8;');
+  };
+
+  const exportToExcel = (data, filename) => {
+    const formattedData = formatDataForExport(data);
+    if (formattedData.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Create a simple Excel-compatible format (tab-separated values)
+    const headers = Object.keys(formattedData[0]);
+    const excelContent = [
+      headers.join('\t'),
+      ...formattedData.map(row => 
+        headers.map(header => row[header] || '').join('\t')
+      )
+    ].join('\n');
+
+    downloadFile(excelContent, filename, 'application/vnd.ms-excel;charset=utf-8;');
+  };
+
+  const handleExport = (format, scope) => {
+    let dataToExport = [];
+    let filenamePrefix = '';
+
+    switch (scope) {
+      case 'selected':
+        if (selectedItems.size === 0) {
+          alert('No items selected for export');
+          return;
+        }
+        dataToExport = filteredAutomations.filter(automation => 
+          selectedItems.has(automation.air_id)
+        );
+        filenamePrefix = `automations_selected_${selectedItems.size}`;
+        break;
+      case 'filtered':
+        dataToExport = filteredAutomations;
+        filenamePrefix = hasActiveFilters || searchTerm 
+          ? 'automations_filtered' 
+          : 'automations_all';
+        break;
+      case 'all':
+        dataToExport = automations;
+        filenamePrefix = 'automations_all';
+        break;
+      default:
+        return;
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+    const filename = `${filenamePrefix}_${timestamp}`;
+
+    switch (format) {
+      case 'csv':
+        exportToCSV(dataToExport, `${filename}.csv`);
+        break;
+      case 'json':
+        exportToJSON(dataToExport, `${filename}.json`);
+        break;
+      case 'excel':
+        exportToExcel(dataToExport, `${filename}.xls`);
+        break;
+    }
+
+    setShowExportDropdown(false);
+  };
+
+  // Selection functionality
+  const handleSelectAll = () => {
+    if (selectedItems.size === filteredAutomations.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredAutomations.map(automation => automation.air_id)));
+    }
+  };
+
+  const handleSelectItem = (airId) => {
+    const newSelected = new Set(selectedItems);
+    if (newSelected.has(airId)) {
+      newSelected.delete(airId);
+    } else {
+      newSelected.add(airId);
+    }
+    setSelectedItems(newSelected);
+  };
+
   const filteredAutomations = automations.filter(automation => {
     // Search term filter
     const matchesSearch = !searchTerm || (
@@ -402,6 +579,12 @@ export default function AutomationDatabase() {
             onClearFilters={clearFilters}
             getUniqueValues={getUniqueValues}
             allAutomations={automations}
+            selectedItems={selectedItems}
+            onSelectItem={handleSelectItem}
+            onSelectAll={handleSelectAll}
+            onExport={handleExport}
+            showExportDropdown={showExportDropdown}
+            onToggleExportDropdown={setShowExportDropdown}
           />
         </div>
       ) : (
@@ -455,6 +638,148 @@ export default function AutomationDatabase() {
                       <PlusIcon className="h-5 w-5 mr-2" />
                       Add Automation
                     </button>
+
+                    {/* Export Button */}
+                    <div className="relative" ref={exportDropdownRef}>
+                      <button
+                        onClick={() => setShowExportDropdown(!showExportDropdown)}
+                        className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                      >
+                        <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+                        Export
+                        <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {/* Export Dropdown */}
+                      {showExportDropdown && (
+                        <div className="absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg border border-gray-200 z-20">
+                          <div className="p-4">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">Export Data</h3>
+                            
+                            {/* Export Scope */}
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">What to export:</h4>
+                              <div className="space-y-2">
+                                {selectedItems.size > 0 && (
+                                  <button
+                                    onClick={() => {}}
+                                    className="w-full text-left px-3 py-2 text-sm bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors"
+                                  >
+                                    <div className="font-medium text-blue-900">Selected Items ({selectedItems.size})</div>
+                                    <div className="text-blue-700">Export only selected automations</div>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => {}}
+                                  className="w-full text-left px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+                                >
+                                  <div className="font-medium text-gray-900">
+                                    {hasActiveFilters || searchTerm ? 'Filtered Results' : 'Current View'} ({filteredAutomations.length})
+                                  </div>
+                                  <div className="text-gray-700">
+                                    {hasActiveFilters || searchTerm ? 'Export filtered/searched results' : 'Export all visible items'}
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => {}}
+                                  className="w-full text-left px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors"
+                                >
+                                  <div className="font-medium text-gray-900">All Data ({automations.length})</div>
+                                  <div className="text-gray-700">Export complete database</div>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Export Formats */}
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">Export format:</h4>
+                              <div className="grid grid-cols-3 gap-2">
+                                {/* CSV Format */}
+                                <div className="space-y-1">
+                                  {selectedItems.size > 0 && (
+                                    <button
+                                      onClick={() => handleExport('csv', 'selected')}
+                                      className="w-full px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                      title="Export selected as CSV"
+                                    >
+                                      CSV
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleExport('csv', 'filtered')}
+                                    className="w-full px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                    title="Export filtered/current view as CSV"
+                                  >
+                                    CSV
+                                  </button>
+                                  <button
+                                    onClick={() => handleExport('csv', 'all')}
+                                    className="w-full px-3 py-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                    title="Export all data as CSV"
+                                  >
+                                    CSV
+                                  </button>
+                                </div>
+
+                                {/* JSON Format */}
+                                <div className="space-y-1">
+                                  {selectedItems.size > 0 && (
+                                    <button
+                                      onClick={() => handleExport('json', 'selected')}
+                                      className="w-full px-3 py-2 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                                      title="Export selected as JSON"
+                                    >
+                                      JSON
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleExport('json', 'filtered')}
+                                    className="w-full px-3 py-2 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                                    title="Export filtered/current view as JSON"
+                                  >
+                                    JSON
+                                  </button>
+                                  <button
+                                    onClick={() => handleExport('json', 'all')}
+                                    className="w-full px-3 py-2 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+                                    title="Export all data as JSON"
+                                  >
+                                    JSON
+                                  </button>
+                                </div>
+
+                                {/* Excel Format */}
+                                <div className="space-y-1">
+                                  {selectedItems.size > 0 && (
+                                    <button
+                                      onClick={() => handleExport('excel', 'selected')}
+                                      className="w-full px-3 py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                      title="Export selected as Excel"
+                                    >
+                                      Excel
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleExport('excel', 'filtered')}
+                                    className="w-full px-3 py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                    title="Export filtered/current view as Excel"
+                                  >
+                                    Excel
+                                  </button>
+                                  <button
+                                    onClick={() => handleExport('excel', 'all')}
+                                    className="w-full px-3 py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                    title="Export all data as Excel"
+                                  >
+                                    Excel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -610,6 +935,14 @@ export default function AutomationDatabase() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
+                          <th className="px-6 py-3 text-left">
+                            <input
+                              type="checkbox"
+                              checked={filteredAutomations.length > 0 && selectedItems.size === filteredAutomations.length}
+                              onChange={handleSelectAll}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             AIR ID
                           </th>
@@ -634,9 +967,24 @@ export default function AutomationDatabase() {
                         {filteredAutomations.map((automation) => (
                           <tr 
                             key={automation.air_id}
-                            className={`hover:bg-gray-50 cursor-pointer transition-colors ${selectedAutomation?.air_id === automation.air_id ? 'bg-blue-50 border-l-4 border-blue-500' : ''}`}
+                            className={`hover:bg-gray-50 cursor-pointer transition-colors ${
+                              selectedAutomation?.air_id === automation.air_id ? 'bg-blue-50 border-l-4 border-blue-500' : ''
+                            } ${
+                              selectedItems.has(automation.air_id) ? 'bg-blue-25' : ''
+                            }`}
                             onClick={() => handleRowClick(automation)}
                           >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.has(automation.air_id)}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectItem(automation.air_id);
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
                               {automation.air_id}
                             </td>
@@ -699,6 +1047,9 @@ export default function AutomationDatabase() {
                     Showing {filteredAutomations.length} of {automations.length} automations
                     {hasActiveFilters && (
                       <span className="text-blue-600 ml-1">(filtered)</span>
+                    )}
+                    {selectedItems.size > 0 && (
+                      <span className="text-green-600 ml-1">• {selectedItems.size} selected</span>
                     )}
                   </p>
                   {/* Small CSV Import Button */}
