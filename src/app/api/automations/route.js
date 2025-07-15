@@ -1,8 +1,11 @@
-import { getAllAutomations, createAutomation } from '../../../../lib/database';
+import { createDatabaseAdapter } from '../../../../lib/db-config';
+
+// Get database adapter based on configuration
+const dbAdapter = createDatabaseAdapter();
 
 export async function GET() {
   try {
-    const automations = getAllAutomations();
+    const automations = await dbAdapter.getAllAutomations();
     return Response.json(automations);
   } catch (error) {
     console.error('Error fetching automations:', error);
@@ -22,13 +25,13 @@ export async function POST(request) {
       }, { status: 400 });
     }
     
-    const newAutomation = createAutomation(automationData);
+    const newAutomation = await dbAdapter.createAutomation(automationData);
     return Response.json(newAutomation, { status: 201 });
   } catch (error) {
     console.error('Error creating automation:', error);
     
     // Check for specific database errors
-    if (error.message.includes('UNIQUE constraint failed')) {
+    if (error.message.includes('duplicate key') || error.message.includes('E11000')) {
       return Response.json({ 
         error: `Automation with AIR ID already exists: ${error.message}` 
       }, { status: 409 });
