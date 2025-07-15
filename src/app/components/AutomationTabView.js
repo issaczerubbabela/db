@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MagnifyingGlassIcon, ViewColumnsIcon, RectangleStackIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ViewColumnsIcon, RectangleStackIcon, PlusIcon, TrashIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { 
   UserIcon, 
   ComputerDesktopIcon, 
@@ -11,9 +11,25 @@ import {
   ClockIcon,
   CogIcon
 } from '@heroicons/react/24/outline';
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
 
-export default function AutomationTabView({ automations, loading, onViewTypeChange, onAddAutomation, onDeleteAutomation }) {
-  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
+export default function AutomationTabView({ 
+  automations, 
+  loading, 
+  onViewTypeChange, 
+  onAddAutomation, 
+  onDeleteAutomation,
+  searchTerm,
+  onSearchChange,
+  filters,
+  onFiltersChange,
+  showFilters,
+  onToggleFilters,
+  hasActiveFilters,
+  onClearFilters,
+  getUniqueValues,
+  allAutomations
+}) {
   const [sidebarSearchTerm, setSidebarSearchTerm] = useState('');
   const [selectedAutomation, setSelectedAutomation] = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
@@ -29,53 +45,6 @@ export default function AutomationTabView({ automations, loading, onViewTypeChan
   const filteredSidebarAutomations = automations.filter(automation =>
     automation.name?.toLowerCase().includes(sidebarSearchTerm.toLowerCase()) ||
     automation.air_id?.toLowerCase().includes(sidebarSearchTerm.toLowerCase())
-  );
-
-  // Filter automations for global search across all fields
-  const globalFilteredAutomations = automations.filter(automation => {
-    if (!globalSearchTerm) return true;
-    
-    const searchFields = [
-      automation.air_id,
-      automation.name,
-      automation.type,
-      automation.complexity,
-      automation.brief_description,
-      automation.process_details,
-      automation.object_details,
-      automation.tool,
-      automation.tool_version,
-      automation.queue,
-      automation.coe_fed,
-      automation.shared_folders,
-      automation.shared_mailboxes,
-      automation.documentation,
-      automation.comments,
-      // People fields
-      ...(automation.people || []).map(p => `${p.name} ${p.role}`),
-      // Environment fields
-      ...(automation.environments || []).map(e => `${e.type} ${e.vdi} ${e.service_account}`),
-      // Test data
-      automation.test_data?.spoc,
-      // Metrics
-      automation.metrics?.post_prod_total_cases,
-      automation.metrics?.post_prod_sys_ex_count,
-      automation.metrics?.post_prod_success_rate,
-      // Artifacts
-      automation.artifacts?.artifacts_link,
-      automation.artifacts?.code_review,
-      automation.artifacts?.demo,
-      automation.artifacts?.rampup_issue_list
-    ];
-
-    return searchFields.some(field => 
-      field?.toString().toLowerCase().includes(globalSearchTerm.toLowerCase())
-    );
-  });
-
-  // Apply global search to sidebar results
-  const finalSidebarAutomations = filteredSidebarAutomations.filter(automation =>
-    globalFilteredAutomations.includes(automation)
   );
 
   const tabs = [
@@ -378,7 +347,7 @@ export default function AutomationTabView({ automations, loading, onViewTypeChan
             <div>
               <h3 className="text-lg font-medium text-gray-900">Automations</h3>
               <p className="text-xs text-gray-500 mt-1">
-                {finalSidebarAutomations.length} of {automations.length} records
+                {filteredSidebarAutomations.length} of {automations.length} records
               </p>
             </div>
             
@@ -417,9 +386,9 @@ export default function AutomationTabView({ automations, loading, onViewTypeChan
 
         {/* Automation List */}
         <div className="flex-1 overflow-y-auto">
-          {finalSidebarAutomations.length > 0 ? (
+          {filteredSidebarAutomations.length > 0 ? (
             <div className="space-y-1 p-2">
-              {finalSidebarAutomations.map((automation) => (
+              {filteredSidebarAutomations.map((automation) => (
                 <div
                   key={automation.air_id}
                   onClick={() => setSelectedAutomation(automation)}
@@ -457,17 +426,136 @@ export default function AutomationTabView({ automations, loading, onViewTypeChan
         {/* Global Search Header */}
         <div className="bg-white border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
-            <div className="flex-1 relative max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+            <div className="flex items-center space-x-3 flex-1">
+              <div className="flex-1 relative max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search across all fields..."
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 text-black rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-              <input
-                type="text"
-                placeholder="Global search across all fields..."
-                value={globalSearchTerm}
-                onChange={(e) => setGlobalSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 text-black rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
+              
+              {/* Filter Button */}
+              <div className="relative">
+                <button
+                  onClick={() => onToggleFilters(!showFilters)}
+                  className={`flex items-center px-3 py-2 border rounded-md text-sm font-medium transition-colors ${
+                    hasActiveFilters 
+                      ? 'border-blue-500 text-blue-600 bg-blue-50' 
+                      : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  <FunnelIcon className="h-4 w-4 mr-2" />
+                  Filters
+                  {hasActiveFilters && (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {Object.values(filters).filter(f => f !== '').length}
+                    </span>
+                  )}
+                  <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {/* Filter Dropdown */}
+                {showFilters && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium text-gray-900">Filters</h3>
+                        {hasActiveFilters && (
+                          <button
+                            onClick={onClearFilters}
+                            className="text-sm text-blue-600 hover:text-blue-800"
+                          >
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {/* Type Filter */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                          <select
+                            value={filters.type}
+                            onChange={(e) => onFiltersChange({...filters, type: e.target.value})}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">All types</option>
+                            {getUniqueValues('type').map(type => (
+                              <option key={type} value={type}>{type}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        {/* Complexity Filter */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Complexity</label>
+                          <select
+                            value={filters.complexity}
+                            onChange={(e) => onFiltersChange({...filters, complexity: e.target.value})}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">All complexities</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                          </select>
+                        </div>
+                        
+                        {/* COE/FED Filter */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">COE/FED</label>
+                          <select
+                            value={filters.coe_fed}
+                            onChange={(e) => onFiltersChange({...filters, coe_fed: e.target.value})}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">All COE/FED</option>
+                            {getUniqueValues('coe_fed').map(coe => (
+                              <option key={coe} value={coe}>{coe}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        {/* Description Filter */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                          <select
+                            value={filters.hasDescription}
+                            onChange={(e) => onFiltersChange({...filters, hasDescription: e.target.value})}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">All</option>
+                            <option value="with">With description</option>
+                            <option value="without">Without description</option>
+                          </select>
+                        </div>
+                        
+                        {/* Date Range Filter */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Created</label>
+                          <select
+                            value={filters.dateRange}
+                            onChange={(e) => onFiltersChange({...filters, dateRange: e.target.value})}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">All time</option>
+                            <option value="today">Today</option>
+                            <option value="week">Past week</option>
+                            <option value="month">Past month</option>
+                            <option value="unknown">Unknown date</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             
             <button
