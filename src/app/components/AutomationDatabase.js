@@ -19,6 +19,8 @@ export default function AutomationDatabase() {
   const [showFilters, setShowFilters] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [selectedItems, setSelectedItems] = useState(new Set());
+  const [editingCell, setEditingCell] = useState(null); // { airId, field }
+  const [editingValue, setEditingValue] = useState('');
   const [filters, setFilters] = useState({
     type: '',
     complexity: '',
@@ -558,6 +560,172 @@ export default function AutomationDatabase() {
     }
   };
 
+  // Inline editing functionality
+  const startEdit = (airId, field, currentValue) => {
+    setEditingCell({ airId, field });
+    setEditingValue(currentValue || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingCell(null);
+    setEditingValue('');
+  };
+
+  const saveEdit = async () => {
+    if (!editingCell) return;
+
+    try {
+      const { airId, field } = editingCell;
+      
+      // Prepare the update data
+      const updateData = {
+        [field]: editingValue.trim()
+      };
+
+      const response = await fetch(`/api/automations/${airId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (response.ok) {
+        const updatedAutomation = await response.json();
+        
+        // Update local state
+        setAutomations(prev => 
+          prev.map(automation => 
+            automation.air_id === airId 
+              ? { ...automation, ...updateData, updated_at: new Date().toISOString() }
+              : automation
+          )
+        );
+
+        // Update selected automation if it's the one being edited
+        if (selectedAutomation?.air_id === airId) {
+          setSelectedAutomation(prev => ({ ...prev, ...updateData }));
+        }
+
+        cancelEdit();
+        console.log(`Field ${field} updated for automation ${airId}`);
+      } else {
+        const error = await response.text();
+        console.error('Failed to update automation:', error);
+        alert(`Failed to update: ${error}`);
+      }
+    } catch (error) {
+      console.error('Error updating automation:', error);
+      alert('Error updating automation');
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      cancelEdit();
+    }
+  };
+
+  const isEditing = (airId, field) => {
+    return editingCell?.airId === airId && editingCell?.field === field;
+  };
+
+  const renderEditableCell = (automation, field, value, className = "") => {
+    const isCurrentlyEditing = isEditing(automation.air_id, field);
+    
+    if (isCurrentlyEditing) {
+      return (
+        <div className="flex items-center space-x-1">
+          {field === 'type' || field === 'complexity' || field === 'coe_fed' ? (
+            <select
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+              onBlur={saveEdit}
+              autoFocus
+              className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {field === 'type' && (
+                <>
+                  <option value="">Select type...</option>
+                  {getUniqueValues('type').map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </>
+              )}
+              {field === 'complexity' && (
+                <>
+                  <option value="">Select complexity...</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </>
+              )}
+              {field === 'coe_fed' && (
+                <>
+                  <option value="">Select COE/FED...</option>
+                  {getUniqueValues('coe_fed').map(coe => (
+                    <option key={coe} value={coe}>{coe}</option>
+                  ))}
+                </>
+              )}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={editingValue}
+              onChange={(e) => setEditingValue(e.target.value)}
+              onKeyDown={handleKeyPress}
+              onBlur={saveEdit}
+              autoFocus
+              className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          )}
+          <button
+            onClick={saveEdit}
+            className="text-green-600 hover:text-green-800 p-1"
+            title="Save"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+          <button
+            onClick={cancelEdit}
+            className="text-red-600 hover:text-red-800 p-1"
+            title="Cancel"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div 
+        className={`cursor-pointer hover:bg-blue-50 p-1 rounded group ${className}`}
+        onClick={(e) => {
+          e.stopPropagation();
+          startEdit(automation.air_id, field, value);
+        }}
+        title="Click to edit"
+      >
+        <div className="flex items-center justify-between">
+          <span className={value ? '' : 'text-gray-400 italic'}>
+            {value || 'Click to add...'}
+          </span>
+          <svg className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       {viewType === 'tab' ? (
@@ -585,6 +753,15 @@ export default function AutomationDatabase() {
             onExport={handleExport}
             showExportDropdown={showExportDropdown}
             onToggleExportDropdown={setShowExportDropdown}
+            editingCell={editingCell}
+            editingValue={editingValue}
+            onStartEdit={startEdit}
+            onCancelEdit={cancelEdit}
+            onSaveEdit={saveEdit}
+            onEditValueChange={setEditingValue}
+            onKeyPress={handleKeyPress}
+            isEditing={isEditing}
+            renderEditableCell={renderEditableCell}
           />
         </div>
       ) : (
@@ -986,23 +1163,43 @@ export default function AutomationDatabase() {
                               />
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                              {automation.air_id}
+                              {renderEditableCell(automation, 'air_id', automation.air_id, 'font-medium text-blue-600')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                              {automation.name}
+                              {renderEditableCell(automation, 'name', automation.name, 'text-gray-900 font-medium')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {automation.type}
+                              {renderEditableCell(automation, 'type', automation.type, 'text-gray-500')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              {automation.complexity && (
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getComplexityColor(automation.complexity)}`}>
-                                  {automation.complexity}
-                                </span>
+                              {isEditing(automation.air_id, 'complexity') ? (
+                                renderEditableCell(automation, 'complexity', automation.complexity)
+                              ) : (
+                                <div 
+                                  className="cursor-pointer hover:bg-blue-50 p-1 rounded group"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startEdit(automation.air_id, 'complexity', automation.complexity);
+                                  }}
+                                  title="Click to edit"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    {automation.complexity ? (
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getComplexityColor(automation.complexity)}`}>
+                                        {automation.complexity}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-400 italic">Click to add...</span>
+                                    )}
+                                    <svg className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </div>
+                                </div>
                               )}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-500 max-w-md truncate">
-                              {automation.brief_description}
+                            <td className="px-6 py-4 text-sm text-gray-500 max-w-md">
+                              {renderEditableCell(automation, 'brief_description', automation.brief_description, 'text-gray-500 max-w-md truncate')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               <div className="flex items-center space-x-2">
